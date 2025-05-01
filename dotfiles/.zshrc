@@ -63,7 +63,7 @@ ZSH_THEME="robbyrussell"
 HIST_STAMPS="dd/mm/yyyy"
 
 # Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
+# ZSH_CUSTOM=$DOTFILES
 
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
@@ -105,6 +105,12 @@ export LANG=en_US.UTF-8
 source ~/aliases.zsh
 source ~/path.zsh
 
-# Enable Starship prompt
-eval "$(starship init zsh)"
+# pnpm
+export PNPM_HOME="/Users/tyloo/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
 
+eval "$(starship init zsh)"

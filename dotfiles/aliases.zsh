@@ -1,8 +1,12 @@
 # Shortcuts
 alias co="cd ~/Code"
+
 alias reloaddns="dscacheutil -flushcache && sudo killall -HUP mDNSResponder"
-alias l="/opt/homebrew/Cellar/coreutils/9.3/libexec/gnubin/ls -AhlFo --color --group-directories-first"
+alias l="gls -AhlFo --color --group-directories-first"
 alias meh="echo '¯\_(ツ)_/¯' | pbcopy"
+
+# Link cursor rules
+alias acr="ln -s /Users/tyloo/Code/Projects/cursor.rules .cursor"
 
 # Symfony
 alias sf="symfony"
@@ -21,6 +25,10 @@ alias grump="stan && cs"
 
 # PHP
 alias cfresh="rm -rf vendor/ composer.lock && composer i"
+alias php81="brew link --overwrite php@8.1"
+alias php82="brew link --overwrite php@8.2"
+alias php83="brew link --overwrite php@8.3"
+alias php84="brew link --overwrite php@8.4"
 
 # JS
 alias nfresh="rm -rf node_modules/ yarn.lock && yarn install"
@@ -30,13 +38,14 @@ alias commit="git add . && git commit -s -m"
 alias nah="git clean -df && git reset --hard"
 alias pull="git pull"
 alias push="git push"
-alias wip="commit wip"
+alias wip="commit wip -n"
 
 # Enable aliases to be sudo’ed
 alias sudo='sudo '
 
 # Get macOS Software Updates, and update Homebrew, npm and their installed packages and composer global packages
 alias update='sudo softwareupdate -i -a; brew bundle --cleanup --global -v; brew cu -f -a'
+alias upd='brew bundle --cleanup --global -v; brew cu -f -a'
 
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"

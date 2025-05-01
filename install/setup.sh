@@ -4,6 +4,14 @@ export DOTFILES=$HOME/dotfiles
 
 echo "Setting up your Mac..."
 
+# Check if Xcode Command Line Tools are installed
+if ! xcode-select -p &>/dev/null; then
+  echo "Xcode Command Line Tools not found. Installing..."
+  xcode-select --install
+else
+  echo "Xcode Command Line Tools already installed."
+fi
+
 # Check for Oh My Zsh and install if we don't have it
 if ! [ -d $HOME/.oh-my-zsh ]; then
   sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
@@ -14,9 +22,13 @@ fi
 # Check for Homebrew and install if we don't have it
 if test ! $(which brew); then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $HOME/.zprofile
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
 # Symlink all dotfiles
+rm -rf $HOME/.zshrc
 ln -sf $DOTFILES/dotfiles/.Brewfile $HOME/.Brewfile
 ln -sf $DOTFILES/dotfiles/.gitconfig $HOME/.gitconfig
 ln -sf $DOTFILES/dotfiles/.gitignore_global $HOME/.gitignore_global
@@ -29,12 +41,8 @@ ln -sf $DOTFILES/dotfiles/path.zsh $HOME/path.zsh
 # Add autosuggestion for zsh and Make zsh default shell
 chsh -s $(which zsh)
 
-# Update Homebrew recipes
-brew update
-
-# Install all our dependencies with bundle (See Brewfile)
-brew tap homebrew/bundle
-brew bundle --global -v
+# Install Homebrew packages
+brew bundle --cleanup --global -v; brew cu -f -a
 
 # Create a Sites directory
 # This is a default directory for macOS user accounts but doesn't comes pre-installed
@@ -44,4 +52,4 @@ mkdir -p $HOME/Code
 source $DOTFILES/install/macos.sh
 
 # Reload to apply changes
-reload
+exec ${SHELL} -l
