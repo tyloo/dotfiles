@@ -105,12 +105,4 @@ export LANG=en_US.UTF-8
 source ~/aliases.zsh
 source ~/path.zsh
 
-# pnpm
-export PNPM_HOME="/Users/tyloo/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
-
 eval "$(starship init zsh)"
