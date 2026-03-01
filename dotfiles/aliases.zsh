@@ -5,9 +5,6 @@ alias reloaddns="dscacheutil -flushcache && sudo killall -HUP mDNSResponder"
 alias l="gls -AhlFo --color --group-directories-first"
 alias meh="echo '¯\_(ツ)_/¯' | pbcopy"
 
-# Link cursor rules
-alias acr="ln -s /Users/tyloo/Code/Projects/cursor.rules .cursor"
-
 # Symfony
 alias sf="symfony"
 alias con="sf console"

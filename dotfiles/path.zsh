@@ -1,5 +1,5 @@
 # Global path
-export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:$HOME/bin:/Applications/Docker.app/Contents/Resources/bin:$PATH
+export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:$HOME/bin:$HOME/.local/bin:/Applications/Docker.app/Contents/Resources/bin:$PATH
 
 # Use project specific binaries before global ones
 export PATH="node_modules/.bin:vendor/bin:$PATH"
