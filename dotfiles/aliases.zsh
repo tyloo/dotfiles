@@ -5,11 +5,19 @@ alias reloaddns="dscacheutil -flushcache && sudo killall -HUP mDNSResponder"
 alias l="gls -AhlFo --color --group-directories-first"
 alias meh="echo '¯\_(ツ)_/¯' | pbcopy"
 
+# Claude
+alias cc="claude --chrome --dangerously-skip-permissions"
+
+# Eneba
+alias o="eneba open"
+alias awslogin="helis auth:aws && helis auth:docker"
+alias ci="composer run phpstan && composer run rector && composer run phpcs-fix && composer run phpunit"
+
 # Symfony
 alias sf="symfony"
 alias con="sf console"
 alias c="sf composer"
-alias cc="con cache:clear"
+alias c:c="con cache:clear"
 alias rmc="rm -rf var/cache var/log"
 
 # Verify CS & PHPStan
@@ -26,6 +34,7 @@ alias php81="brew link --overwrite php@8.1"
 alias php82="brew link --overwrite php@8.2"
 alias php83="brew link --overwrite php@8.3"
 alias php84="brew link --overwrite php@8.4"
+alias php85="brew link --overwrite php@8.5"
 
 # JS
 alias nfresh="rm -rf node_modules/ yarn.lock && yarn install"
@@ -41,8 +50,8 @@ alias wip="commit wip -n"
 alias sudo='sudo '
 
 # Get macOS Software Updates, and update Homebrew, npm and their installed packages and composer global packages
-alias update='sudo softwareupdate -i -a; brew bundle --cleanup --global -v; brew cu -f -a'
-alias upd='brew bundle --cleanup --global -v; brew cu -f -a'
+alias update='sudo softwareupdate -i -a; HOMEBREW_NO_ASK=1 brew bundle --force-cleanup --global -v; brew cu -f -a'
+alias upd='HOMEBREW_NO_ASK=1 brew bundle --force-cleanup --global -v; brew cu -f -a'
 
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"

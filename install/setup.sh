@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export DOTFILES=$HOME/dotfiles
+export DOTFILES="$HOME/dotfiles"
 
 echo "Setting up your Mac..."
 
@@ -27,16 +27,36 @@ if test ! $(which brew); then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-# Symlink all dotfiles
-rm -rf $HOME/.zshrc
-ln -sf $DOTFILES/dotfiles/.Brewfile $HOME/.Brewfile
-ln -sf $DOTFILES/dotfiles/.gitconfig $HOME/.gitconfig
-ln -sf $DOTFILES/dotfiles/.gitignore_global $HOME/.gitignore_global
-ln -sf $DOTFILES/dotfiles/.hushlogin $HOME/.hushlogin
-ln -sf $DOTFILES/dotfiles/.inputrc $HOME/.inputrc
-ln -sf $DOTFILES/dotfiles/.zshrc $HOME/.zshrc
-ln -sf $DOTFILES/dotfiles/aliases.zsh $HOME/aliases.zsh
-ln -sf $DOTFILES/dotfiles/path.zsh $HOME/path.zsh
+# Link dotfiles without discarding an existing file or link.
+link_dotfile() {
+  link_source=$1
+  link_target=$2
+
+  if [ -L "$link_target" ] && [ "$(readlink "$link_target")" = "$link_source" ]; then
+    return
+  fi
+
+  if [ -e "$link_target" ] || [ -L "$link_target" ]; then
+    link_backup="${link_target}.backup.$(date +%Y%m%d%H%M%S)"
+    while [ -e "$link_backup" ] || [ -L "$link_backup" ]; do
+      link_backup="${link_backup}.1"
+    done
+    mv "$link_target" "$link_backup" || return 1
+    echo "Backed up $link_target to $link_backup"
+  fi
+
+  ln -s "$link_source" "$link_target"
+}
+
+link_dotfile "$DOTFILES/dotfiles/.Brewfile" "$HOME/.Brewfile"
+link_dotfile "$DOTFILES/dotfiles/.gitconfig" "$HOME/.gitconfig"
+link_dotfile "$DOTFILES/dotfiles/.gitignore_global" "$HOME/.gitignore_global"
+link_dotfile "$DOTFILES/dotfiles/.hushlogin" "$HOME/.hushlogin"
+link_dotfile "$DOTFILES/dotfiles/.inputrc" "$HOME/.inputrc"
+link_dotfile "$DOTFILES/dotfiles/.zshenv" "$HOME/.zshenv"
+link_dotfile "$DOTFILES/dotfiles/.zshrc" "$HOME/.zshrc"
+link_dotfile "$DOTFILES/dotfiles/aliases.zsh" "$HOME/aliases.zsh"
+link_dotfile "$DOTFILES/dotfiles/path.zsh" "$HOME/path.zsh"
 
 # Add autosuggestion for zsh and Make zsh default shell
 chsh -s $(which zsh)

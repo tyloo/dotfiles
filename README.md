@@ -36,17 +36,17 @@ Your Mac is now ready to use!
 
 If you want to start with your own dotfiles from this setup, it's pretty easy to do so. First of all you'll need to fork this repo. After that you can tweak it the way you want.
 
-Go through the [`.macos`](./.macos) file and adjust the settings to your liking. You can find much more settings at [the original script by Mathias Bynens](https://github.com/mathiasbynens/dotfiles/blob/master/.macos) and [Kevin Suttle's macOS Defaults project](https://github.com/kevinSuttle/MacOS-Defaults).
+Go through [`install/macos.sh`](./install/macos.sh) and adjust the settings to your liking. You can find more settings in [the original script by Mathias Bynens](https://github.com/mathiasbynens/dotfiles/blob/master/.macos) and [Kevin Suttle's macOS Defaults project](https://github.com/kevinSuttle/MacOS-Defaults).
 
-Check out the [`Brewfile`](./Brewfile) file and adjust the apps you want to install for your machine.
+Check out [`dotfiles/.Brewfile`](./dotfiles/.Brewfile) and adjust the apps you want to install for your machine.
 
-Check out the [`aliases.zsh`](./aliases.zsh) file and add your own aliases. If you need to tweak your `$PATH` check out the [`path.zsh`](./path.zsh) file. You can adjust the [`.zshrc`](./.zshrc) file to your liking to tweak your Oh My Zsh setup. More info about how to customize Oh My Zsh can be found [here](https://github.com/robbyrussell/oh-my-zsh/wiki/Customization).
+Check out [`dotfiles/aliases.zsh`](./dotfiles/aliases.zsh) to add aliases. If you need to tweak your `$PATH`, edit [`dotfiles/path.zsh`](./dotfiles/path.zsh). Adjust [`dotfiles/.zshrc`](./dotfiles/.zshrc) to customize Oh My Zsh, and [`dotfiles/.zshenv`](./dotfiles/.zshenv) for Zsh environment setup. More information about customizing Oh My Zsh is [here](https://github.com/robbyrussell/oh-my-zsh/wiki/Customization).
 
 Enjoy your own Dotfiles!
 
 ## Thanks To...
 
 I first got the idea for starting this project by visiting the [Github does dotfiles](https://dotfiles.github.io/) project. Both [Zach Holman](https://github.com/holman/dotfiles) and [Mathias Bynens](https://github.com/mathiasbynens/dotfiles) were great sources of inspiration. Also, these dotfiles are forked from [Dries Vints](https://github.com/driesvints/dotfiles)!
-[Sourabh Bajaj](https://twitter.com/sb2nov/)'s [Mac OS X Setup Guide](http://sourabhbajaj.com/mac-setup/) proved to be invaluable. Thanks to [@denysdovhan](https://github.com/denysdovhan) for [his awesome Zsh theme](https://github.com/denysdovhan/spaceship-prompt)! And lastly, I'd like to thank [Maxime Fabre](https://twitter.com/anahkiasen) for [his excellent presentation on Homebrew](https://speakerdeck.com/anahkiasen/a-storm-homebrewin) which made me migrate a lot to a [`Brewfile`](./Brewfile).
+[Sourabh Bajaj](https://twitter.com/sb2nov/)'s [Mac OS X Setup Guide](http://sourabhbajaj.com/mac-setup/) proved to be invaluable. Thanks to [@denysdovhan](https://github.com/denysdovhan) for [his awesome Zsh theme](https://github.com/denysdovhan/spaceship-prompt)! And lastly, I'd like to thank [Maxime Fabre](https://twitter.com/anahkiasen) for [his excellent presentation on Homebrew](https://speakerdeck.com/anahkiasen/a-storm-homebrewin) which made me migrate a lot to a [`Brewfile`](./dotfiles/.Brewfile).
 
 In general, I'd like to thank every single one who open-sources their dotfiles for their effort to contribute something to the open-source community. Your work means the world! :earth_africa: :heart:

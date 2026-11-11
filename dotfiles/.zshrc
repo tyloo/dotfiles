@@ -106,3 +106,17 @@ source ~/aliases.zsh
 source ~/path.zsh
 
 eval "$(starship init zsh)"
+
+
+# pnpm
+export PNPM_HOME="/Users/tyloo/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
+
+# Mise
+# Drop state inherited from a parent shell so mise rebuilds PATH from the one set above
+unset __MISE_ORIG_PATH __MISE_DIFF __MISE_SESSION
+eval "$(mise activate zsh)"
