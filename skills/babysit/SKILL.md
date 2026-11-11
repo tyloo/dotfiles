@@ -1,15 +1,17 @@
 ---
 name: babysit
-description: Keep one GitLab merge request moving from rebase through CI and review cleanup until it is merge-ready.
+description: Rebase, test, and clear one GitLab merge request; hand off when only human approval remains.
 argument-hint: "GitLab merge request URL or IID"
 disable-model-invocation: true
 ---
 
 # Babysit a GitLab merge request
 
-Run this after the user opens a merge request and provides its URL or IID. Stay on that MR until GitLab reports it mergeable, or until the only remaining blocker is a human reviewer resolving a thread that has already received a substantive reply. Never merge the MR or enable auto-merge.
+Run this after the user opens a merge request and provides its URL or IID. Stay on that MR through CI and review cleanup. Hand off when GitLab reports it mergeable, or when all agent work is done and only human review actions remain. Never merge the MR or enable auto-merge.
 
 The invocation authorizes rebasing the MR source branch, making and committing fixes, and pushing them. A rebase rewrite may be pushed only with `--force-with-lease`. Human review threads stay unresolved for their authors to resolve.
+
+Before posting any GitLab reply or final report, load and apply the `unslop` skill. Preserve Monocle's machine-readable markers and required values.
 
 ## 1. Pin the MR and start event tracking
 
@@ -18,12 +20,18 @@ Run from the MR's repository root. Read its `AGENTS.md`, `README.md`, and the co
 Before the first status snapshot, connect to the GitLab Reactor stream from the VPN:
 
 ```sh
-curl -N https://gitlab-events.eneba.engineering/stream
+curl -sS -N https://gitlab-events.eneba.engineering/stream
 ```
 
-Keep one stream open and act only on events whose `mr_url` is this MR's URL. It needs no token. Use it as a wake-up signal, not as the source of current state. It sends pipeline success/failure, new notes, approvals, merges, and closes; it has no Monocle-complete event and does not replay missed events after disconnect. Monocle grading replies are not emitted as note events. On reconnect, follow the advertised retry delay and re-read the MR, head pipeline, and open discussions before acting. Ignore events for old SHAs. If the MR is merged or closed, stop.
+Keep one stream open and act only on events whose `mr_url` is this MR's URL. It needs no token. `-sS` suppresses curl's progress meter while preserving errors. Use the stream as a wake-up signal, not as the source of current state. It sends pipeline success/failure, new notes, approvals, merges, and closes; it has no Monocle-complete event and does not replay missed events after disconnect. Monocle grading replies are not emitted as note events. On reconnect, follow the advertised retry delay and re-read the MR, head pipeline, and open discussions before acting. Ignore events for old SHAs. If the MR is merged or closed, stop.
 
-Take the initial snapshot with `helis gitlab mr view <iid> -F json`. Record the source branch, target branch, MR URL, current SHA, draft state, and head pipeline. Get the current user's GitLab username with `helis gitlab api user` so your own replies are not mistaken for new review work.
+Take a compact initial snapshot:
+
+```sh
+helis gitlab mr view <iid> -F json | jq '{source_branch, target_branch, web_url, sha, draft, state, detailed_merge_status, head_pipeline: {id: .head_pipeline.id, status: .head_pipeline.status, sha: .head_pipeline.sha}}'
+```
+
+Record the source branch, target branch, MR URL, current SHA, draft state, and head pipeline. Get the current user's GitLab username with `helis gitlab api user` so your own replies are not mistaken for new review work.
 
 Stop before changing anything if the worktree is dirty. Show `git status --short` and ask the user what to do; do not stash, reset, or overwrite their work.
 
@@ -39,6 +47,12 @@ If the rebase rewrote the source branch, push that branch with `git push --force
 
 The gate is the head pipeline for the MR's current SHA, not a green pipeline from an older commit. On a pipeline event, compare its `sha` to the MR's current SHA and refresh MR state before relying on it.
 
+Immediately after a push, `head_pipeline` on the MR object may still refer to the previous run. Query the latest pipeline for the source branch and verify its SHA:
+
+```sh
+helis gitlab api "projects/:id/pipelines?ref=<source-branch>&per_page=1" | tail -1 | jq '.[0] | {id, sha, status, web_url}'
+```
+
 If CI fails, inspect every failed non-allowed job and its log before changing code:
 
 ```sh
@@ -48,7 +62,7 @@ helis gitlab ci trace <job-id>
 
 Fix failures caused by the MR. Retry a clear infrastructure/transient failure once. If the same failure remains after the fix or retry, or its cause is outside the MR and unclear, stop and ask the user. Run the repository's relevant tests and checks before committing.
 
-Do not push while Monocle is actively reviewing that SHA; a push can cancel its review. Before pushing a CI fix, check the matching-SHA Monocle state described in step 4. If that run is active, keep the fix local and wait using the same five-minute fallback cadence. Push all CI fixes for that head together in one commit. A normal follow-up fix uses a normal push. Restart this gate for the new SHA and do not inspect review threads until its pipeline is green.
+Do not push while Monocle is actively reviewing the current SHA; a push can cancel its review. Before any push, check the matching-SHA state described in step 4. If that run is active, keep fixes local and wait. Batch fixes for that head into one commit. A normal follow-up fix uses a normal push. Restart this gate for the new SHA and do not inspect review threads until its pipeline is green.
 
 Wait on matching `pipeline_succeeded` / `pipeline_failed` events. If the stream disconnects, reconnect and snapshot current state. Do not repeatedly fetch job lists while the pipeline is pending.
 
@@ -56,7 +70,9 @@ Wait on matching `pipeline_succeeded` / `pipeline_failed` events. If the stream 
 
 Read the MR description with `helis gitlab api "projects/:id/merge_requests/<iid>"`. Parse the `<!-- monocle:state {...} -->` block and select the run whose `head_sha` equals the current MR SHA. `ended_at` means that run completed; `cancelled_at` means it did not complete. A draft MR may skip Monocle. Never treat a missing state or a run for another SHA as completion.
 
-While the matching run is active, keep listening to the event stream and check this state every five minutes as a fallback. Do not push during the run. If the run was cancelled, refresh the MR head and state, then wait for the run for the current SHA. If no run is recorded and the MR is not a draft, continue checking; do not infer that Monocle has finished just because time passed.
+While the matching run is active, keep listening to the event stream and check this state every five minutes as a fallback. Do not push during the run. If the run was cancelled, refresh the MR head and state, then wait for the run for the current SHA.
+
+If no run is recorded for the current SHA, do not claim Monocle is complete. If a previous completed run produced findings and a tested fix batch is ready, fetch a fresh complete discussion snapshot and proceed to step 6. Do not wait for Monocle to review an unchanged remote SHA when the fixes are still local; the push will start a review of the new SHA. If no assessed fix batch is ready, keep checking for the run every five minutes. Send a user update when the state changes, not for each unchanged fallback.
 
 Before handling findings, fetch **all** discussions, including every page, from the current MR:
 
@@ -125,10 +141,28 @@ helis gitlab api -X PUT \
 
 The push starts a new head pipeline and may start another Monocle run. Repeat the CI gate, matching-SHA Monocle wait, and complete discussion snapshot only for new or changed work. Do not re-fix or re-reply to an item whose current request was already addressed.
 
-## 7. Stop and report
+## 7. Stop, run retro, and report
 
 Stop successfully when the latest head pipeline is green, Monocle is complete (or skipped because the MR is a draft), all current findings have been assessed and replied to, all human threads have a substantive reply, and GitLab reports the MR mergeable. Never merge or enable auto-merge.
 
-If the only remaining blocker is a human thread that you have answered and must leave unresolved, stop and hand it back to the human reviewer; do not wait for them to resolve it. For any other external blocker, keep watching the relevant event and refresh the MR state. Stop and ask the user if work depends on a product decision or a repeated/ambiguous failure.
+If all agent work is complete and only human review actions remain, hand off instead of polling indefinitely. Leave human threads unresolved for their authors. For approval-only blockers, read the approval rules and report which approvals remain:
 
-Report the final head SHA, pipeline ID/status for that SHA, Monocle result for that SHA, GitLab mergeability and any remaining human-only blocker, each discussion's outcome/reply/resolve status, and `git status --short`. State clearly if the MR is still blocked by an external human action.
+```sh
+helis gitlab api "projects/:id/merge_requests/<iid>/approval_state" | tail -1 | jq '{rules: [.rules[] | select(.approved == false) | {name, required: .approvals_required, approved_by: [(.approved_by // [])[] | .username]}]}'
+```
+
+Resume monitoring only if the user asks. Stop and ask the user if work depends on a product decision or a repeated/ambiguous failure.
+
+### Required retrospective
+
+Before every terminal report, read `~/.agents/skills/retro/SKILL.md` and apply its workflow to the current babysit session. Follow it inline because `retro` is user-invoked-only. This applies to merge-ready completion, human-only handoff, an MR that merged or closed, a blocker, and user cancellation. A monitoring wait is ongoing work, not completion; retain observations for the terminal retro instead of repeating it on each wake-up.
+
+Use the session's tool results, timings, diffs, and review outcomes as evidence. Reuse snapshots already collected; fetch more only to verify a candidate improvement. Focus on avoidable test reruns, command timeouts, redundant reads or API calls, monitoring gaps, stale-SHA or pagination mistakes, and missed or duplicate review replies.
+
+Rank actionable improvements by impact. For each, name the observed problem, the smallest proposed change and its target file or tool, and how a future run would verify the benefit. Check existing checks and instructions before proposing another. Put mechanical safeguards in automated checks rather than adding prose rules.
+
+Include a short `Retro` section in the final report, or state that no actionable improvement was found. Ask for approval before changing skills, instructions, or tooling outside the user's current authorization. A retro does not authorize self-modification or another MR push.
+
+### Final report
+
+Report the final head SHA, pipeline ID/status for that SHA, Monocle result for that SHA, GitLab mergeability, any remaining approval rules, each discussion's outcome/reply/resolve status, and `git status --short`. State clearly if the MR is still blocked by a human action.
