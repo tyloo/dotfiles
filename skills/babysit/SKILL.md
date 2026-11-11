@@ -120,7 +120,15 @@ Copy the finding's `fp` from its marker. Because this skill is acting as an agen
 <!-- monocle:reply {"fp":"<fingerprint>","valid":true,"addressed":"yes","importance":"correct"} -->
 ```
 
-Use the values supported by your assessment. Omit any key you cannot judge; do not turn uncertainty into agreement. Reply to every finding. Fix valid findings that should be addressed in this MR. Resolve a resolvable Monocle finding only after its fix is committed and pushed and its reply says `addressed: "yes"`. Leave invalid, partially addressed, or unaddressed findings open. Non-resolvable Monocle notes cannot be resolved.
+Use the values supported by your assessment. Omit any key you cannot judge; do not turn uncertainty into agreement. Reply to every finding. Fix valid findings that should be addressed in this MR.
+
+Resolve each resolvable Monocle finding after posting its evidence-based assessment:
+
+- **No fix needed.** The finding is invalid or not applicable under the current contract. Resolve it without a commit or another user confirmation. Keep the grading honest, for example `valid: false` and `addressed: "no"`; resolution does not mean a fix was made.
+- **Already fixed.** Verify the current remote head and relevant tests, cite the existing pushed fix, reply with `addressed: "yes"`, and resolve. No new commit is needed.
+- **Fix needed.** Test, commit and push the fix, then reply with `addressed: "yes"` and resolve.
+
+Keep valid unfixed, partially addressed, uncertain, or decision-blocked findings open. A documented deferral or a follow-up ticket is not a fix and does not qualify as "no fix needed". Non-resolvable Monocle notes cannot be resolved. Human-authored threads remain reviewer-owned as described above.
 
 ## 6. Batch, verify, commit, push, and reply
 
@@ -130,7 +138,7 @@ Set the full-check command timeout from the repository's recorded runtime, with 
 
 Before committing, run the relevant tests and the repository's required checks, inspect the complete diff, and confirm no unrelated files changed. Commit once for the batch using the repository's commit conventions. Push once. Use `--force-with-lease` only if this batch includes a rebase rewrite; otherwise use a normal push. If the remote head moved unexpectedly, stop and resnapshot instead of overwriting it.
 
-After the push, reply on the addressed human and Monocle threads. Keep replies concise and evidence-based. Human threads remain unresolved. Resolve only the eligible Monocle findings described above. A reply with no code change does not require a commit.
+After the push, reply on the addressed human and Monocle threads. Keep replies concise and evidence-based. Human threads remain unresolved. Apply step 5's Monocle resolution criteria. No-change assessments and eligible resolutions can happen immediately, without waiting for an unrelated fix batch.
 
 Post replies through the discussion API, preserving the same thread:
 
@@ -140,7 +148,7 @@ helis gitlab api -X POST \
   -f "body=<reply>"
 ```
 
-Resolve only an eligible Monocle finding after its pushed fix:
+Resolve an eligible Monocle finding using step 5's criteria:
 
 ```sh
 helis gitlab api -X PUT \
@@ -157,6 +165,7 @@ The MR is **cleaned up** when all of these hold for its current head:
 - The pipeline for that SHA is green.
 - Monocle completed a non-cancelled run for that SHA, or skipped the MR because it is a draft.
 - A fresh complete discussion snapshot contains no unassessed finding or unanswered human request. Required fixes are committed and pushed, and no agent fix batch remains pending.
+- Every resolvable Monocle finding eligible under step 5 is resolved. A valid unfixed finding is a blocker, not cleaned-up completion.
 
 This is a terminal outcome even if GitLab reports `not_approved` rather than `mergeable`. Fully resolved threads and no new Monocle findings satisfy the discussion condition. Stop instead of waiting for approvals, another review, or the merge. Never merge or enable auto-merge.
 
