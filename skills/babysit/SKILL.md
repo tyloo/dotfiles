@@ -1,6 +1,6 @@
 ---
 name: babysit
-description: Clear CI and reviews for one GitLab merge request, then stop without waiting for human approval.
+description: Clear CI and reviews for one GitLab merge request, then stop without waiting for merge approvals.
 argument-hint: "GitLab merge request URL or IID"
 disable-model-invocation: true
 ---
@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Run this after the user opens a merge request and provides its URL or IID. Work through CI and review cleanup until step 7's stop condition is met. Never merge the MR or enable auto-merge.
 
-The invocation authorizes rebasing the MR source branch, making and committing fixes, and pushing them. A rebase rewrite may be pushed only with `--force-with-lease`. Human review threads stay unresolved for their authors to resolve.
+The invocation authorizes rebasing the MR source branch, making and committing fixes, and pushing them, subject to step 5's validation gate for HIGH and CRITICAL findings. A rebase rewrite may be pushed only with `--force-with-lease`. Human review threads stay unresolved for their authors to resolve.
 
 Before posting any GitLab reply or final report, load and apply the `unslop` skill. Preserve Monocle's machine-readable markers and required values.
 
@@ -89,7 +89,9 @@ helis gitlab api --paginate "projects/:id/merge_requests/<iid>/discussions?per_p
 
 Inspect every unresolved, non-system thread and every new note since the prior snapshot. Do not skip a thread because it already has a reply: determine whether the latest note contains a response from you to the current ask. Avoid duplicate replies. Re-snapshot if a `note_created` event arrives before the next push.
 
-## 5. Assess human threads and Monocle findings
+## 5. Acknowledge, triage, act, reply, and resolve
+
+For each current ask, acknowledge it and choose an evidence-based outcome: **fix** or **no fix**. Complete any required fix, then post the final thread reply. Resolve the thread if Monocle authored it; leave human threads to their authors. An acknowledgement or preliminary assessment alone does not complete this workflow.
 
 ### Human-authored threads
 
@@ -108,7 +110,13 @@ Use the Monocle notice on this MR as the grading contract. If it is unavailable,
 helis gitlab api 'projects/d5100%2Fservices%2Feneba-pay%2Fcore-ledger/merge_requests/89/notes/4028144674'
 ```
 
-Apply the grading contract only to comments containing a `<!-- monocle:finding {...} -->` marker. A general Monocle notice or status comment is not a finding. For each finding, verify the named defect in code and tests, decide whether to fix it, and assess whether its severity is correct. In the same thread, say what you checked and provide:
+Apply the grading contract only to comments containing a `<!-- monocle:finding {...} -->` marker. A general Monocle notice or status comment is not a finding. For each finding, verify the named defect in code and tests, choose fix or no fix, and assess whether its severity is correct.
+
+**HIGH and CRITICAL findings require user validation.** Present the proposed fix, its effect on behavior, and focused questions the user must answer to validate it. Recommend a concrete approach rather than asking the user to design the solution. Wait for explicit validation before implementing the fix or resolving the finding. If the proposed outcome is no fix, get validation of that decision instead. An MR-wide risk label does not replace the finding's severity.
+
+For lower-severity findings, make the fix/no-fix decision from the code, tests, repository contract, and task scope. Ask only when a required product decision or missing fact prevents that decision. Do not leave an assessed thread open merely because the current behavior has a known tradeoff.
+
+In the final thread reply, state the decision, what you checked, and provide:
 
 - `valid`: `true` or `false`
 - `addressed`: `yes`, `partial`, or `no`
@@ -120,15 +128,15 @@ Copy the finding's `fp` from its marker. Because this skill is acting as an agen
 <!-- monocle:reply {"fp":"<fingerprint>","valid":true,"addressed":"yes","importance":"correct"} -->
 ```
 
-Use the values supported by your assessment. Omit any key you cannot judge; do not turn uncertainty into agreement. Reply to every finding. Fix valid findings that should be addressed in this MR.
+Use the values supported by your assessment. Omit any key you cannot judge; do not turn uncertainty into agreement. Reply to every finding. A no-fix decision may retain a known limitation; explain why it stays unchanged in this MR and keep `valid: true` and `addressed: "no"` when the defect is real and unfixed. Resolution is a completed triage outcome, not proof that the code changed.
 
 Resolve each resolvable Monocle finding after posting its evidence-based assessment:
 
-- **No fix needed.** The finding is invalid or not applicable under the current contract. Resolve it without a commit or another user confirmation. Keep the grading honest, for example `valid: false` and `addressed: "no"`; resolution does not mean a fix was made.
+- **No fix.** Explain why the finding is invalid, not applicable, or deliberately left unchanged in this MR. After the final reply, resolve it without an empty commit or another confirmation, except when HIGH/CRITICAL validation is still pending. Preserve honest grading; an accepted limitation can remain `valid: true` and `addressed: "no"`.
 - **Already fixed.** Verify the current remote head and relevant tests, cite the existing pushed fix, reply with `addressed: "yes"`, and resolve. No new commit is needed.
 - **Fix needed.** Test, commit and push the fix, then reply with `addressed: "yes"` and resolve.
 
-Keep valid unfixed, partially addressed, uncertain, or decision-blocked findings open. A documented deferral or a follow-up ticket is not a fix and does not qualify as "no fix needed". Non-resolvable Monocle notes cannot be resolved. Human-authored threads remain reviewer-owned as described above.
+Keep a finding open while triage is incomplete, a required fix remains unpushed, or user validation is pending. A deliberate no-fix decision is complete once explained; a fix merely postponed to another batch is not. A deferral or follow-up ticket never justifies `addressed: "yes"`. Non-resolvable Monocle notes cannot be resolved. Human-authored threads remain reviewer-owned as described above.
 
 ## 6. Batch, verify, commit, push, and reply
 
@@ -138,7 +146,7 @@ Set the full-check command timeout from the repository's recorded runtime, with 
 
 Before committing, run the relevant tests and the repository's required checks, inspect the complete diff, and confirm no unrelated files changed. Commit once for the batch using the repository's commit conventions. Push once. Use `--force-with-lease` only if this batch includes a rebase rewrite; otherwise use a normal push. If the remote head moved unexpectedly, stop and resnapshot instead of overwriting it.
 
-After the push, reply on the addressed human and Monocle threads. Keep replies concise and evidence-based. Human threads remain unresolved. Apply step 5's Monocle resolution criteria. No-change assessments and eligible resolutions can happen immediately, without waiting for an unrelated fix batch.
+After the push, reply on the addressed human and Monocle threads. Keep replies concise and evidence-based. Human threads remain unresolved. Finish each completed Monocle fix/no-fix outcome with resolution under step 5. No-fix replies and resolutions can happen immediately, without waiting for an unrelated fix batch. Reuse an existing final reply when it already records the current decision; update a preliminary reply that still says the decision is pending.
 
 Post replies through the discussion API, preserving the same thread:
 
@@ -164,8 +172,8 @@ The MR is **cleaned up** when all of these hold for its current head:
 
 - The pipeline for that SHA is green.
 - Monocle completed a non-cancelled run for that SHA, or skipped the MR because it is a draft.
-- A fresh complete discussion snapshot contains no unassessed finding or unanswered human request. Required fixes are committed and pushed, and no agent fix batch remains pending.
-- Every resolvable Monocle finding eligible under step 5 is resolved. A valid unfixed finding is a blocker, not cleaned-up completion.
+- A fresh complete discussion snapshot contains no untriaged finding or unanswered human request. Every finding has a final fix/no-fix reply, required fixes are committed and pushed, and no agent fix batch or HIGH/CRITICAL validation remains pending.
+- Every resolvable Monocle finding with a completed fix/no-fix outcome is resolved. Report any accepted, unfixed limitations separately rather than describing them as fixed or leaving their threads open.
 
 This is a terminal outcome even if GitLab reports `not_approved` rather than `mergeable`. Fully resolved threads and no new Monocle findings satisfy the discussion condition. Stop instead of waiting for approvals, another review, or the merge. Never merge or enable auto-merge.
 
@@ -195,4 +203,4 @@ Include a short `Retro` section in the final report, or state that no actionable
 
 ### Final report
 
-Report the final head SHA, pipeline ID/status for that SHA, Monocle result for that SHA, GitLab mergeability, any remaining approval rules, each discussion's outcome/reply/resolve status, and `git status --short`. State clearly if the MR is still blocked by a human action.
+Report the final head SHA, pipeline ID/status for that SHA, Monocle result for that SHA, GitLab mergeability, any remaining approval rules, each discussion's fix/no-fix decision and reply/resolve status, and `git status --short`. Distinguish pushed fixes from resolved no-fix decisions. State clearly if the MR is still blocked by a human action.
